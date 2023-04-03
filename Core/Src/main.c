@@ -21,59 +21,142 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define SAD_READ 0xD7
-#define SAD_WRITE 0xD6
+#define I2C_Addr 0x50
+/* PAGE ZERO
+ * At power-on Page 0 is selected, PAGE_ID register
+ * can be used to identify the current selected page and
+ * change between page 0 and page 1
+ */
+#define MAG_RADIUS_MSB 0x6A
+#define MAG_RADIUS_LSB 0x69
+#define ACC_RADIUS_MSB 0x68
+#define ACC_RADIUS_LSB 0x67
+#define GYR_OFFSET_Z_MSB 0x66
+#define GYR_OFFSET_Z_LSB 0x65
+#define GYR_OFFSET_Y_MSB 0x64
+#define GYR_OFFSET_Y_LSB 0x63
+#define GYR_OFFSET_X_MSB 0x62
+#define GYR_OFFSET_X_LSB 0x61
+#define MAG_OFFSET_Z_MSB 0x60
+#define MAG_OFFSET_Z_LSB 0x5F
+#define MAG_OFFSET_Y_MSB 0x5E
+#define MAG_OFFSET_Y_LSB 0x5D
+#define MAG_OFFSET_X_MSB 0x5C
+#define MAG_OFFSET_X_LSB 0x5B
+#define ACC_OFFSET_Z_MSB 0x5A
+#define ACC_OFFSET_Z_LSB 0x59
+#define ACC_OFFSET_Y_MSB 0x58
+#define ACC_OFFSET_Y_LSB 0x57
+#define ACC_OFFSET_X_MSB 0x56
+#define ACC_OFFSET_X_LSB 0x55
 
-// FIFO Control
-#define FIFO_CTRL 0x02
-#define FIFO_CTRL1 0x07
-#define FIFO_CTRL2 0x08
-#define FIFO_CTRL3 0x09
-#define FIFO_CTRL4 0x0A
+#define AXIS_MAP_SIGN 0x42
+#define AXIS_MAP_CONFIG 0x41
+#define TEMP_SOURCE 0x40
+#define SYS_TRIGGER 0x3F
+#define PWR_MODE 0x3E
+#define OPR_MODE 0x3D
+#define UNIT_SEL 0x3B
+#define SYS_ERR 0x3A
+#define SYS_STATUS 0x39
+#define SYS_CLK_STATUS 0x38
+#define INT_STA 0x37
+#define ST_RESULT 0x36
+#define CALIB_STAT 0x35
+#define TEMP 0x34
+// Gravity Vector
+#define GRV_DATA_Z_MSB 0x33
+#define GRV_DATA_Z_LSB 0x32
+#define GRV_DATA_Y_MSB 0x31
+#define GRV_DATA_Y_LSB 0x30
+#define GRV_DATA_X_MSB 0x2F
+#define GRV_DATA_X_LSB 0x2E
+// Linear Acceleration
+#define LIA_DATA_Z_MSB 0x2D
+#define LIA_DATA_Z_LSB 0x2C
+#define LIA_DATA_Y_MSB 0x2B
+#define LIA_DATA_Y_LSB 0x2A
+#define LIA_DATA_X_MSB 0x29
+#define LIA_DATA_X_LSB 0x28
+// Quaternion
+#define QUA_DATA_Z_MSB 0x27
+#define QUA_DATA_Z_LSB 0x26
+#define QUA_DATA_Y_MSB 0x25
+#define QUA_DATA_Y_LSB 0x24
+#define QUA_DATA_X_MSB 0x23
+#define QUA_DATA_X_LSB 0x22
+#define QUA_DATA_W_MSB 0x21
+#define QUA_DATA_W_LSB 0x20
+// Pitch
+#define EUL_PITCH_MSB 0x1F
+#define EUL_PITCH_LSB 0x1E
+// Roll
+#define EUL_ROLL_MSB 0x1D
+#define EUL_ROLL_LSB 0x1C
+// Heading
+#define EUL_HEADING_MSB 0x1B
+#define EUL_HEADING_LSB 0x1A
+// Sensor Data
+#define GYR_DATA_Z_MSB 0x19
+#define GYR_DATA_Z_LSB 0x18
+#define GYR_DATA_Y_MSB 0x17
+#define GYR_DATA_Y_LSB 0x16
+#define GYR_DATA_X_MSB 0x15
+#define GYR_DATA_X_LSB 0x14
 
-// Interrupts
-#define INT1_CTRL 0x00
-#define INT2_CTRL 0x0E
+#define MAG_DATA_Z_MSB 0x13
+#define MAG_DATA_Z_LSB 0x12
+#define MAG_DATA_Y_MSB 0x11
+#define MAG_DATA_Y_LSB 0x10
+#define MAG_DATA_X_MSB 0xF
+#define MAG_DATA_X_LSB 0xE
 
-// Status Register
-#define STATUS_REG 0x1E
+#define ACC_DATA_Z_MSB 0xD
+#define ACC_DATA_Z_LSB 0xC
+#define ACC_DATA_Y_MSB 0xB
+#define ACC_DATA_Y_LSB 0xA
+#define ACC_DATA_X_MSB 0x9
+#define ACC_DATA_X_LSB 0x8
 
-/* Control Registers */
-#define CTRL1_XL 0x10
-#define CTRL2_G 0x11
-#define CTRL3_C 0x12
-#define CTRL4_C 0x13
-#define CTRL5_C 0x14
-#define CTRL6_C 0x15
-#define CTRL7_G 0x16
-#define CTRL8_XL 0x17
-#define CTRL9_XL 0x18
-#define CTRL10_C 0x19
+// Extra
+#define PAGE_ID 0x7
+#define BL_REV_ID 0x6
+#define SW_REV_ID_MSB 0x5
+#define SW_REV_ID_LSB 0x4
+#define GYR_ID 0x3
+#define MAG_ID 0x2
+#define ACC_ID 0x1
+#define CHIP_ID 0x0
 
-// Temperature Sensor Registers
-#define OUT_TEMP_L 0x20
-#define OUT_TEMP_H 0x21
 
-// G stands for angular rate
-#define OUTX_L_G 0x22
-#define OUTX_H_G 0x23
-#define OUTY_L_G 0x24
-#define OUTY_H_G 0x25
-#define OUTZ_L_G 0x26
-#define OUTZ_H_G 0x27
-
-// A stands for linear acceleration
-#define OUTX_L_A 0x28
-#define OUTX_H_A 0x29
-#define OUTY_L_A 0x2A
-#define OUTY_H_A 0x2B
-#define OUTZ_L_A 0x2C
-#define OUTZ_H_A 0x2D
-
-// Accelerometer *-Axis User Offset Correction
-#define X_OFS_USR 0x73
-#define Y_OFS_USR 0x74
-#define Z_OFS_USR 0x75
+/*
+ * Page One. Use the PAGE_ID register to
+ * switch and see values between the two pages
+*/
+#define GYR_AM_SET 0x1F
+#define GYR_AM_THRES 0x1E
+#define GYR_DUR_Z 0x1D
+#define GYR_HR_Z_SET 0x1C
+#define GYR_DUR_Y 0x1B
+#define GYR_HR_Y_SET 0x1A
+#define GYR_DUR_X 0x19
+#define GYR_HR_X_SET 0x18
+#define GYR_INT_SETING 0x17
+#define ACC_NM_SET 0x16
+#define ACC_NM_THRE 0x15
+#define ACC_HG_THRES 0x14
+#define ACC_HG_DURATION 0x13
+#define ACC_INT_SETTINGS 0x12
+#define ACC_AM_THRES 0x11
+#define INT_EN 0x10
+#define INT_MSK 0xF
+#define GYR_SLEEP_CONFIG 0xD
+#define ACC_SLEEP_CONFIG 0xC
+#define GYR_CONFIG_1 0xB
+#define GYR_CONFIG_0 0xA
+#define MAG_CONFIG 0x9
+#define ACC_CONFIG 0x8
+#define PAGE_ID 0x7
 
 /* USER CODE END Includes */
 
@@ -146,23 +229,61 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_StatusTypeDef ret;
   volatile int16_t xGyro = 0, yGyro = 0, zGyro = 0;
-  volatile int16_t xAcceleration = 0, yAcceleration = 0, zAcceleration = 0;
-  volatile int16_t temp = 0;
+  volatile int16_t xAcc = 0, yAcc = 0, zAcc = 0;
+  volatile int16_t xMag = 0, yMag = 0, zMag = 0;
+  volatile int32_t time = 0;
   uint8_t buf[20];
 
-  // Write to accelerometer setup
-  buf[0] = CTRL1_XL;
-  buf[1] = 0x60; // Writing to ODR_XL [3:0]
-  HAL_I2C_Master_Transmit(&hi2c1, SAD_WRITE, &buf[0], 2, 1000);
+  // SETUP for IMU
+  	/* Set Config Mode */
+  	buf[0] = OPR_MODE;
+  	buf[1] = 0x00;
+  	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+  	HAL_Delay(30);
 
-  // Write to gyroscope setup
-  buf[0] = CTRL2_G;
-  buf[1] = 0x60;
-  HAL_I2C_Master_Transmit(&hi2c1, SAD_WRITE, &buf[0], 2, 1000);
+  	/* Reset */
+	buf[0] = SYS_TRIGGER;
+	buf[1] = 0x20;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+	HAL_Delay(30);
 
-  buf[0] = INT1_CTRL;
-  buf[1] = 0x03;
-  HAL_I2C_Master_Transmit(&hi2c1, SAD_WRITE, &buf[0], 2, 1000);
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	while (buf[0] != 0xA0) {
+		HAL_Delay(10);
+		HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	}
+
+	HAL_Delay(50);
+
+
+	/* Normal Power Mode */
+	buf[0] = PWR_MODE;
+	buf[1] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+	HAL_Delay(10);
+
+	/* Set Page Number */
+	buf[0] = PAGE_ID;
+	buf[1] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	/* Reset 8 */
+	buf[0] = SYS_TRIGGER;
+	buf[1] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+	HAL_Delay(10);
+
+	/* Set Trigger Addr */
+	buf[0] = OPR_MODE;
+	buf[1] = 0x07;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+	HAL_Delay(30);
+
+	buf[0] = OPR_MODE;
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -171,40 +292,21 @@ int main(void)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
-	// Polls Status Register for Acceelratometer Data
-	// If we also want to poll G first, check if buf[0] &= 2
-	buf[0] = STATUS_REG;
-	HAL_I2C_Master_Transmit(&hi2c1, SAD_WRITE, &buf[0], 1, 1000);
-	HAL_I2C_Master_Receive(&hi2c1, SAD_READ, &buf[0], 1, 1000);
-	if (buf[0] &= 1) {
-		buf[0] = OUT_TEMP_L;
-		ret = HAL_I2C_Master_Transmit(&hi2c1, SAD_WRITE, &buf[0], 1, 1000);
-		ret = HAL_I2C_Master_Receive(&hi2c1, SAD_READ, &buf[0], 14, 1000);
-		temp = buf[0];
-		temp |= (buf[1] << 8);
-		xGyro = buf[2];
-		xGyro |= (buf[3] << 8);
-		yGyro = buf[4];
-		yGyro |= (buf[5] << 8);
-		zGyro = buf[6];
-		zGyro |= (buf[7] << 8);
-		xAcceleration = buf[8];
-		xAcceleration |= (buf[9] << 8);
-		yAcceleration = buf[10];
-		yAcceleration = (buf[11] << 8);
-		zAcceleration = buf[12];
-		zAcceleration = (buf[13] << 8);
-	}
-	// 256 LSB / C
-	// temperature and Accelerometer Data is Reading
-	// Rip Gyro
-	double realTemp = (float) temp / 256 + 25;
-	double realAccelX = (float) xAcceleration / 16384;
-	double realAccelY = (float) yAcceleration / 16384;
-	double realAccelZ = (float) zAcceleration / 16384;
-	double realGyroX = xGyro;
-	double realGyroY = yGyro;
-	double realGyroZ = zGyro;
+	buf[0] = ACC_DATA_X_LSB;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 18, 1000);
+
+	xAcc = buf[0] | (buf[1] << 8);
+	yAcc = buf[2] | (buf[3] << 8);
+	zAcc = buf[4] | (buf[5] << 8);
+	xMag = buf[6] | (buf[7] << 8);
+	yMag = buf[8] | (buf[9] << 8);
+	zMag = buf[10] | (buf[11] << 8);
+	xGyro = buf[12] | (buf[13] << 8);
+	yGyro = buf[14] | (buf[15] << 8);
+	zGyro = buf[16] | (buf[17] << 8);
+
+	HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }
