@@ -365,6 +365,13 @@ int main(void)
 
 	// Quaternion declaration
 	float quaternion[4] = {0, 0, 0, 0};
+	// R Matrix declaration
+	float R[4][4] = {
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0}
+		};
 
 	// Calibration of the sensor
 	for (int cal_index = 0; cal_index < 2000; cal_index++) {
@@ -474,13 +481,37 @@ int main(void)
 	 */
 
 	if (set_gyro_angles == 1) {
+		// Set R Matrix
+		R[0][0] = 1;
+		R[0][1] = -1 * xGyro / 2;
+		R[0][2] = -1 * yGyro / 2;
+		R[0][3] = -1 * zGyro / 2;
+		R[1][0] = xGyro / 2;
+		R[1][1] = 1;
+		R[1][2] = zGyro / 2;
+		R[1][3] = -1 * yGyro / 2;
+		R[2][0] = -1 * yGyro / 2;
+		R[2][1] = -1 * zGyro / 2;
+		R[2][2] = 1;
+		R[2][3] = xGyro / 2;
+		R[3][0] = zGyro / 2;
+		R[3][1] = yGyro / 2;
+		R[3][2] = -1 * xGyro / 2;
+		R[3][3] = 1;
 
+		// TODO: Could get rid of R-Matrix?
+		// Update Quaternion based on old rendition and R matrix
+		quaternion[0] = R[0][0] * quaternion[0] + R[0][1] * quaternion[1] + R[0][2] * quaternion[2] + R[0][3] * quaternion[3];
+		quaternion[1] = R[1][0] * quaternion[0] + R[1][1] * quaternion[1] + R[1][2] * quaternion[2] + R[1][3] * quaternion[3];
+		quaternion[2] = R[2][0] * quaternion[0] + R[2][1] * quaternion[1] + R[2][2] * quaternion[2] + R[2][3] * quaternion[3];
+		quaternion[3] = R[3][0] * quaternion[0] + R[3][1] * quaternion[1] + R[3][2] * quaternion[2] + R[3][3] * quaternion[3];
 	} else {
 		quaternion[0] = 1;
 		quaternion[1] = xGyro / 2;
 		quaternion[2] = yGyro / 2;
 		quaternion[3] = zGyro / 2;
 	}
+
 
 	// Sets the boolean for the gyro angles
 	set_gyro_angles = 1;
