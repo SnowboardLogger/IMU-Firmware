@@ -401,6 +401,96 @@ int main(void)
 	// Acceleration vector w/o gravity effect
 	float acc_vec[3] = {0, 0, 0};
 
+	// Calibration for the sensor
+	buf[0] = ACC_OFFSET_X_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_OFFSET_X_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_OFFSET_Y_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_OFFSET_Y_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_OFFSET_Z_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_OFFSET_Z_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_X_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_X_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_Y_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_Y_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_Z_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_OFFSET_Z_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_X_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_X_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_Y_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_Y_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_Z_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = GYR_OFFSET_Z_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_RADIUS_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = ACC_RADIUS_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_RADIUS_LSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	buf[0] = MAG_RADIUS_MSB;
+	buf[0] = 0x00;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
+
+	/*
 	// Calibration of the sensor
 	for (int cal_index = 0; cal_index < 2000; cal_index++) {
 		buf[0] = GYR_DATA_X_LSB;
@@ -444,7 +534,7 @@ int main(void)
 	float avg_delta_z = (zMag_Max - zMag_Min) / 2;
 
 	float avg_delta = (avg_delta_x + avg_delta_y + avg_delta_z) / 3;
-
+	*/
 
 
   /* USER CODE END 2 */
@@ -471,15 +561,16 @@ int main(void)
 	yGyro = buf[14] | (buf[15] << 8);
 	zGyro = buf[16] | (buf[17] << 8);
 
-	// Subtract offset calibration from raw gyro_x value
-	xGyro -= xGyro_Cal;
-	yGyro -= yGyro_Cal;
-	zGyro -= zGyro_Cal;
+	buf[0] = CALIB_STAT;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	printf("%d \n", buf[0]);
+	int16_t sysCalStat = (buf[0] >> 6) & 3;
+	int16_t gyrCalStat = (buf[0] >> 4) & 3;
+	int16_t accCalStat = (buf[0] >> 2) & 3;
+	int16_t magCalStat = buf[0] & 3;
+	// printf("%d %d %d %d\n", sysCalStat, gyrCalStat, accCalStat, magCalStat);
 
-	// Calibrate magnometer data
-	float correct_xMag = (xMag - avg_delta_x) * (avg_delta / avg_delta_x);
-	float correct_yMag = (yMag - avg_delta_y) * (avg_delta / avg_delta_y);
-	float correct_zMag = (zMag - avg_delta_z) * (avg_delta / avg_delta_z);
 	// Division based on eight degrees of gravity
 	xAcc_G = (float) xAcc / 1024;
 	yAcc_G = (float) yAcc / 1024;
@@ -595,11 +686,12 @@ int main(void)
 	if (set_gyro_angles == 1) {
 		// prev was 0.9996 and 0.0004
 		// NOTE: Seems to perform better at 0.90 and 0.1
+		angle_yaw = atan2((-yMag * cos(angle_roll) + zMag * sin(angle_roll)),
+						(xMag * cos(angle_pitch) + yMag * sin(angle_pitch) * sin(angle_roll) +
+								zMag * sin(angle_pitch) * cos(angle_roll)));
 		angle_pitch = angle_pitch * 0.90 + angle_pitch_acc * 0.1; // Correct drift gyro pitch angle with accelerometer
 		angle_roll = angle_roll * 0.90 + angle_roll_acc * 0.1; // Correct drift gyro roll angle with accelerometer
-		angle_yaw = atan2((-correct_yMag * cos(angle_roll) + correct_zMag * sin(angle_roll)),
-				(correct_xMag * cos(angle_pitch) + correct_yMag * sin(angle_pitch) * sin(angle_roll) +
-						correct_zMag * sin(angle_pitch) * cos(angle_roll)));
+
 	} else {
 		angle_pitch = angle_pitch_acc;
 		angle_roll = angle_roll_acc;
@@ -699,8 +791,9 @@ int main(void)
 	//printf("%f %f %f %f \n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 	//printf("Pitch: %f		Roll: %f \n\r", angle_pitch_output, angle_roll_output);
 	//printf("Calc Pitch: %f	Calc Roll: %f \n\r", pitch, roll);
+	//printf("%d %d %d %f %f %f \n", xMag, yMag, zMag, correct_xMag, correct_yMag, correct_zMag);
 	// way to check acceleration w/o gravity effect
-	printf("%f %f %f \n", acc_vec[0], acc_vec[1], acc_vec[2]);
+	//printf("%f %f %f \n", acc_vec[0], acc_vec[1], acc_vec[2]);
 	HAL_Delay(5);
 	/* End of Basic Data Reading */
   }
