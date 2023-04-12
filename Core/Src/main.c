@@ -163,6 +163,8 @@
 #define ACC_CONFIG 0x8
 #define PAGE_ID 0x7
 
+#define BNO055_SAMPLERATE_DELAY_MS (100)
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -201,62 +203,6 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* DWT Initialization */
-uint32_t DWT_Delay_Init(void) {
-	/* Disable TRC */
-	CoreDebug->DEMCR &= ~CoreDebug_DEMCR_TRCENA_Msk;
-	/* Enable TRC */
-	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-	/* Disable clock cycle counter */
-	DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk;
-	/* Enable clock cycle counter */
-	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-
-	/* Reset the clock cycle counter value */
-	DWT->CYCCNT = 0;
-
-	/* 3 Noops */
-	__ASM volatile ("NOP");
-	__ASM volatile ("NOP");
-	__ASM volatile ("NOP");
-
-	/* Check if clock cycle counter has started */
-	if (DWT->CYCCNT) {
-		return 0;  /* Clock cycle counter started */
-	} else {
-		return 1; /* clock cycle counter not started */
-	}
-}
-
-/* Delay us function */
-__STATIC_INLINE void DWT_Delay_us(volatile uint32_t au32_microseconds) {
-	uint32_t au32_initial_ticks = DWT->CYCCNT;
-	uint32_t au32_ticks = (HAL_RCC_GetHCLKFreq() / 1000000);
-	au32_microseconds *= au32_ticks;
-	while ((DWT->CYCCNT - au32_initial_ticks) < au32_microseconds-au32_ticks);
-}
-
-/* Delay ms function */
-__STATIC_INLINE void DWT_Delay_ms(volatile uint32_t au32_microseconds) {
-	uint32_t au32_initial_ticks = DWT->CYCCNT;
-  uint32_t au32_ticks = (HAL_RCC_GetHCLKFreq() / 1000);
-  au32_microseconds *= au32_ticks;
-  while ((DWT->CYCCNT - au32_initial_ticks) < au32_microseconds-au32_ticks);
-}
-
-float invSqrt(float number) {
-	long i;
-	float x2, y;
-	const float threehalfs = 1.5F;
-
-	x2 = number * 0.5F;
-	y = number;
-	i = * (long*) &y;
-	i = 0x5f3759df - (i >> 1);
-	y = * (float*) &i;
-	y = y * (threehalfs - (x2 * y * y));
-	return y;
-}
 /* USER CODE END 0 */
 
 /**
@@ -315,7 +261,6 @@ int main(void)
 
 	HAL_Delay(50);
 
-
 	/* Normal Power Mode */
 	buf[0] = PWR_MODE;
 	buf[1] = 0x00;
@@ -333,73 +278,33 @@ int main(void)
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
 	HAL_Delay(10);
 
-	/* Change Units */
-	buf[0] = UNIT_SEL;
-
-	/* Set Page Number to 1*/
-	buf[0] = PAGE_ID;
-	buf[1] = 0x01;
-	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
-
-	/* Change +/- Acc */
-	buf[0] = ACC_CONFIG;
-	buf[1] = 0x02;
-	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
-
-	/* Change +/- Gyro */
-	// 500 dps and 47 Hz
-	buf[0] = GYR_CONFIG_0;
-	buf[1] = 0x1A;
-	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
-
-	/* Set Page Number to 0 */
-	buf[0] = PAGE_ID;
-	buf[1] = 0x00;
-	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
-
 	/* Set Operation Mode */
 	buf[0] = OPR_MODE;
-	buf[1] = 0x07;
+	buf[1] = 0x0C;
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
 	HAL_Delay(30);
 
 	volatile int16_t xGyro = 0, yGyro = 0, zGyro = 0;
-	float xGyro_Cal = 0, yGyro_Cal = 0, zGyro_Cal = 0;
-	int16_t magOrigin[3];
-
 	volatile int16_t xAcc = 0, yAcc = 0, zAcc = 0;
-	int16_t Acc_Vector = 0;
-	float xAcc_G = 0, yAcc_G = 0, zAcc_G = 0;
-	int16_t accel_roll_cal, accel_pitch_cal;
-
-	int8_t set_gyro_angles = 0;
-
 	volatile int16_t xMag = 0, yMag = 0, zMag = 0;
-
 	volatile int32_t time = 0;
 
-	float angle_pitch = 0, angle_roll = 0, angle_yaw = 0;
-	int angle_pitch_buffer = 0, angle_roll_buffer = 0, angle_yaw_buffer = 0;
-	float angle_roll_acc = 0, angle_pitch_acc = 0, angle_yaw_acc = 0;
-	float angle_pitch_output = 0, angle_roll_output = 0, angle_yaw_output = 0;
 
-	// Quaternion declaration
-	float quaternion[4] = {0, 0, 0, 0};
+	uint16_t MEuler[3] = {0, 0, 0};
+	float CEuler[3] = {0, 0, 0};
 
-	// CURRENT QUATERNION
-	float q[4] = {1, 0, 0, 0};
-	// R Matrix declaration
-	float R[4][4] = {
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0},
-			{0, 0, 0, 0}
-		};
+	uint16_t MQuat[4] = {0, 0, 0, 0};
+	float CQuat[4] = {0, 0, 0, 0};
 
-	// Gravity vector (can be easily calculated by quaternion)
-	float grav_vec[3] = {0, 0, 0};
-	// Acceleration vector w/o gravity effect
-	float acc_vec[3] = {0, 0, 0};
+	float acceleration[3] = {0, 0, 0};
+	float magnometer[3] = {0, 0, 0};
+	float gyroscope[3] = {0, 0, 0};
+
+	/* Temperature reading */
+	buf[0] = TEMP;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	int8_t temp = buf[0];
 
 	// Calibration for the sensor
 	buf[0] = ACC_OFFSET_X_LSB;
@@ -490,52 +395,28 @@ int main(void)
 	buf[0] = 0x00;
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 2, 1000);
 
-	/*
-	// Calibration of the sensor
-	for (int cal_index = 0; cal_index < 2000; cal_index++) {
-		buf[0] = GYR_DATA_X_LSB;
-		HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
-		HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 6, 1000);
-		xGyro = buf[0] | (buf[1] << 8);
-		yGyro = buf[2] | (buf[3] << 8);
-		zGyro = buf[4] | (buf[5] << 8);
-		xGyro_Cal += xGyro;
-		yGyro_Cal += yGyro;
-		zGyro_Cal += zGyro;
-		// TODO: Want a 3 microsecond delay here
-		HAL_Delay(1);
-	}
+	float thetaM;
+	float phiM;
+	float thetaFold = 0;
+	float thetaFnew;
+	float phiFold = 0;
+	float phiFnew;
 
-	// Average calibration data
-	xGyro_Cal /= 2000;
-	yGyro_Cal /= 2000;
-	zGyro_Cal /= 2000;
+	float thetaG = 0;
+	float phiG = 0;
 
-	float xMag_Max = -50000, yMag_Max = -50000, zMag_Max = -50000;
-	float xMag_Min = 50000, yMag_Min = 50000, zMag_Min = 50000;
-	for (int cal_index = 0; cal_index < 2000; cal_index++) {
-		buf[0] = MAG_DATA_X_LSB;
-		HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
-		HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 6, 1000);
-		xMag = buf[0] | buf[1] << 8;
-		yMag = buf[2] | buf[3] << 8;
-		zMag = buf[4] | buf[5] << 8;
-		xMag_Max = (xMag > xMag_Max) ? xMag : xMag_Max;
-		yMag_Max = (yMag > yMag_Max) ? yMag : yMag_Max;
-		zMag_Max = (zMag > zMag_Max) ? zMag : zMag_Max;
-		xMag_Min = (xMag > xMag_Min) ? xMag : xMag_Min;
-		xMag_Min = (xMag > xMag_Min) ? xMag : xMag_Min;
-		yMag_Min = (yMag > yMag_Min) ? yMag : yMag_Min;
-		zMag_Min = (zMag > zMag_Min) ? zMag : zMag_Min;
-	}
+	float theta;
+	float phi;
 
-	float avg_delta_x = (xMag_Max - xMag_Min) / 2;
-	float avg_delta_y = (yMag_Max - yMag_Min) / 2;
-	float avg_delta_z = (zMag_Max - zMag_Min) / 2;
+	float thetaRad;
+	float phiRad;
 
-	float avg_delta = (avg_delta_x + avg_delta_y + avg_delta_z) / 3;
-	*/
+	float Xm;
+	float Ym;
+	float psi;
 
+	float dt;
+	unsigned long millisOld = HAL_GetTick();
 
   /* USER CODE END 2 */
 
@@ -544,9 +425,11 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
-	/* Reading in Basic Data */
+
+	/*
+	 * Reading in Basic Data
+	*/
 	buf[0] = ACC_DATA_X_LSB;
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
 	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 18, 1000);
@@ -561,240 +444,93 @@ int main(void)
 	yGyro = buf[14] | (buf[15] << 8);
 	zGyro = buf[16] | (buf[17] << 8);
 
+	acceleration[0] = (double) xAcc / 100.0;
+	acceleration[1] = (double) yAcc / 100.0;
+	acceleration[2] = (double) zAcc / 100.0;
+
+	magnometer[0] = (double) xMag / 16.0;
+	magnometer[1] = (double) yMag / 16.0;
+	magnometer[2] = (double) zMag / 16.0;
+
+	gyroscope[0] =  (double) xGyro / 16.0;
+	gyroscope[1] =  (double) yGyro / 16.0;
+	gyroscope[2] =  (double) zGyro / 16.0;
+
+	/*
+	 * CALIBRATING THE SYSTEM
+	*/
+	uint8_t system, gyro, accel, mg = 0;
 	buf[0] = CALIB_STAT;
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
 	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
-	printf("%d \n", buf[0]);
-	int16_t sysCalStat = (buf[0] >> 6) & 3;
-	int16_t gyrCalStat = (buf[0] >> 4) & 3;
-	int16_t accCalStat = (buf[0] >> 2) & 3;
-	int16_t magCalStat = buf[0] & 3;
-	// printf("%d %d %d %d\n", sysCalStat, gyrCalStat, accCalStat, magCalStat);
+	system = (buf[0] >> 6) & 0x03;
+	gyro = (buf[0] >> 4) & 0x03;
+	accel = (buf[0] >> 2) & 0x03;
+	mg = buf[0] & 0x03;
 
-	// Division based on eight degrees of gravity
-	xAcc_G = (float) xAcc / 1024;
-	yAcc_G = (float) yAcc / 1024;
-	zAcc_G = (float) zAcc / 1024;
-	//printf("%f %f %f \n", xAcc_G, yAcc_G, zAcc_G);
 	/*
-	 *
-	 * CALCULATIONS FOR ROLL, PITCH, YAW
-	 *
-	 */
-	/*
-	// Mahony AHRS Algorithm
-	// degrees/sec to radians/sec
-	xGyro *= 0.0174533f;
-	yGyro *= 0.0174533f;
-	zGyro *= 0.0174533f;
-
-	//normalise accelerometer
-	float norm = invSqrt(xAcc * xAcc + yAcc * yAcc + zAcc * zAcc);
-	xAcc *= norm;
-	yAcc *= norm;
-	zAcc *= norm;
-
-	//normalize magnetometer
-	norm = invSqrt(xMag * xMag + yMag * yMag + zMag * zMag);
-	xMag *= norm;
-	yMag *= norm;
-	zMag *= norm;
-
-	// Aux vairables to reduce arithmetic
-	float q0q0 = q[0] * q[0];
-	float q0q1 = q[0] * q[1];
-	float q0q2 = q[0] * q[2];
-	float q0q3 = q[0] * q[3];
-	float q1q1 = q[1] * q[1];
-	float q1q2 = q[1] * q[2];
-	float q1q3 = q[1] * q[3];
-	float q2q2 = q[2] * q[2];
-	float q2q3 = q[2] * q[3];
-	float q3q3 = q[3] * q[3];
-
-	// Reference direction of Earth's magnetic field
-	float hx = 2.0f * (xMag * (0.5f - q2q2 - q3q3) + yMag * (q1q2 - q0q3) + zMag * (q1q3 + q0q2));
-	float hy = 2.0f * (xMag * (q1q2 + q0q3) + yMag * (0.5f - q1q1 - q3q3) + zMag * (q2q3 - q0q1));
-	float bx = sqrtf(hx * hx + hy * hy);
-	float bz = 2.0f * (xMag * (q1q3 - q0q2) + yMag * (q2q3 + q0q1) + zMag * (0.5f - q1q1 - q2q2));
-
-	// Estimate direction of grav & mag field
-	float halfvx = q1q3 - q0q2;
-	float halfvy = q0q1 + q2q3;
-	float halfvz = q0q0 - 0.5f + q3q3;
-	float halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
-	float halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
-	float halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
-
-	// Error is sum of cross product between estimated direction and measure direction of field vectors
-	float halfex = (yAcc * halfvz - zAcc * halfvy) + (yMag * halfwz - zMag * halfwy);
-	float halfey = (zAcc * halfvz - xAcc * halfvz) + (zMag * halfwx - xMag * halfwz);
-	float halfez = (xAcc * halfvy - yAcc * halfvx) + (xMag * halfwy - yMag * halfwx);
-
-	// Apply Proportional feedback
-	float twoKp = 1.0f;
-	xGyro += twoKp * halfex;
-	yGyro += twoKp * halfey;
-	zGyro += twoKp * halfez;
-
-	// Integrate rate of change of quaternion
-	float invSampleFreq = 1.0f / 47;
-	xGyro *= (0.5f * invSampleFreq);
-	yGyro *= (0.5f * invSampleFreq);
-	zGyro *= (0.5f * invSampleFreq);
-	// Temp variables to hold the values
-	float qa = q[0];
-	float qb = q[1];
-	float qc = q[2];
-	float qd = q[3];
-	q[0] += (-qb * xGyro - qc * yGyro - qd * zGyro);
-	q[1] += (-qa * xGyro + qc * zGyro - qd * yGyro);
-	q[2] += (qa * yGyro - qb * zGyro + qd * xGyro);
-	q[3] += (qa * zGyro + qb * yGyro - qc * xGyro);
-
-	// normalise quaternion
-	norm = invSqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
-	q[0] *= norm;
-	q[1] *= norm;
-	q[2] *= norm;
-	q[3] *= norm;
-
-	float roll = atan2f(q[0] * q[1] + q[2] * q[3], 0.5f - q[1] * q[1] - q[2] * q[2]);
-	float pitch = asinf(-2.0f * (q[1] * q[3] - q[0] * q[2]));
-	float yaw = atan2f(q[1] * q[2] + q[0] * q[3], 0.5f - q[2] * q[2] - q[3] * q[3]);
-	printf("%f %f %f \n", roll, pitch, yaw);
+	 * Obtaining Yaw, Roll, Pitch
 	*/
+	buf[0] = EUL_HEADING_LSB;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 6, 1000);
+	MEuler[0] = buf[0] | (buf[1] << 8); // Heading
+	MEuler[1] = buf[2] | (buf[3] << 8); // Roll
+	MEuler[2] = buf[4] | (buf[5] << 8); // Pitch
 
-	// Gyro Angle Calculations
-	// 0.0000611 = 1 / (250Hz / 65.5)
-	angle_pitch += xGyro * 0.0000611;
-	angle_roll += yGyro * 0.000611;
-	angle_yaw -= zGyro * 0.000611;
+	CEuler[0] = (double) MEuler[0] / 16.0;
+	CEuler[1] = (double) MEuler[1] / 16.0;
+	CEuler[2] = (double) MEuler[2] / 16.0;
 
-	angle_pitch += angle_roll * sin(zGyro * 0.000001066);
-	angle_roll -= angle_pitch * sin(zGyro * 0.000001066);
+	// Quaternion Data
+	buf[0] = QUA_DATA_W_LSB;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 8, 1000);
+	MQuat[0] = buf[0] | (buf[1] << 8); // W
+	MQuat[1] = buf[2] | (buf[3] << 8); // X
+	MQuat[2] = buf[4] | (buf[5] << 8); // Y
+	MQuat[3] = buf[6] | (buf[7] << 8); // Z
 
-	// Accelerometer angle calculations
-	Acc_Vector = sqrt((xAcc * xAcc) + (yAcc * yAcc) + (zAcc * zAcc));
-	angle_pitch_acc = asin((float) yAcc / Acc_Vector) * 57.296;
-	angle_roll_acc = asin((float) xAcc / Acc_Vector) * -57.296;
+	const double scale = (1.0 / (1 << 14));
 
-	// TODO: Place the MPU-6050 spirit level and note the values in the following two lines for calibration
-	angle_pitch_acc -= 0; // Accelerometer calibration value for pitch
-	angle_roll_acc -= 0; // Accelerometer calibration value for roll
-
-	if (set_gyro_angles == 1) {
-		// prev was 0.9996 and 0.0004
-		// NOTE: Seems to perform better at 0.90 and 0.1
-		angle_yaw = atan2((-yMag * cos(angle_roll) + zMag * sin(angle_roll)),
-						(xMag * cos(angle_pitch) + yMag * sin(angle_pitch) * sin(angle_roll) +
-								zMag * sin(angle_pitch) * cos(angle_roll)));
-		angle_pitch = angle_pitch * 0.90 + angle_pitch_acc * 0.1; // Correct drift gyro pitch angle with accelerometer
-		angle_roll = angle_roll * 0.90 + angle_roll_acc * 0.1; // Correct drift gyro roll angle with accelerometer
-
-	} else {
-		angle_pitch = angle_pitch_acc;
-		angle_roll = angle_roll_acc;
-		angle_yaw = angle_yaw_acc;
-		HAL_Delay(1000);
-	}
-
-	// To dampen pitch and roll angles, complementary filter is applied
-	// TODO: Secondary Complementary Filter, used for display purposes (not for output)
-	angle_pitch_output = angle_pitch_output * 0.9 + angle_pitch * 0.1;
-	angle_roll_output = angle_roll_output * 0.90 + angle_roll * 0.1;
-	angle_yaw_output = angle_yaw_output * 0.90 + angle_yaw * 0.1;
+	CQuat[0] = (double) MQuat[0] * scale;
+	CQuat[1] = (double) MQuat[1] * scale;
+	CQuat[2] = (double) MQuat[2] * scale;
+	CQuat[3] = (double) MQuat[3] * scale;
 
 	/*
-	 *
-	 * END OF CALCULATIONS FOR ROLL, PITCH, YAW
-	 *
-	 */
+	 * Tilt
+	*/
+	//thetaM = atan2(acceleration[0] / 9.8, acceleration[2] / 9.8) / 2 / 3.141592654 * 360;
+	//phiM = atan2(acceleration[1] / 9.8, acceleration[2] / 9.8) / 2 / 3.141592654 * 360;
+	/* Low Pass Filter */
+	//phiFnew = 0.95 * phiFold  + 0.05 * phiM;
+	//thetaFnew = 0.95 * thetaFold + 0.05 * thetaM;
 
-	/*
-	 *
-	 * CALCULATIONS FOR VELOCITY
-	 *
-	 */
-	/* Some Notes:
-	 * x0 and x1 have same distance from epicenter
-	 * x0 = r * cos (theta) || y0 = r * sin (theta)
-	 * x1 = r * cos (theta + phi) || y1 = r * cos (theta + phi)
-	 * x1 = x0 * cos (phi) - y0 * sin (phi)
-	 * y1 = x0 * sin(phi) + y0 * cos (phi)
-	 */
-	// TODO: Quaternion does not WORK :(((
-	if (set_gyro_angles == 1) {
-		/*
-		// Set R Matrix
-		R[0][0] = 1;
-		R[0][1] = -1 * xGyro / 2;
-		R[0][2] = -1 * yGyro / 2;
-		R[0][3] = -1 * zGyro / 2;
-		R[1][0] = xGyro / 2;
-		R[1][1] = 1;
-		R[1][2] = zGyro / 2;
-		R[1][3] = -1 * yGyro / 2;
-		R[2][0] = -1 * yGyro / 2;
-		R[2][1] = -1 * zGyro / 2;
-		R[2][2] = 1;
-		R[2][3] = xGyro / 2;
-		R[3][0] = zGyro / 2;
-		R[3][1] = yGyro / 2;
-		R[3][2] = -1 * xGyro / 2;
-		R[3][3] = 1;
+	//dt = (HAL_GetTick() - millisOld) / 1000;
+	//millisOld = HAL_GetTick();
 
-		// TODO: Could get rid of R-Matrix?
-		// Update Quaternion based on old rendition and R matrix
-		newQuaternion[0] = R[0][0] * quaternion[0] + R[0][1] * quaternion[1] + R[0][2] * quaternion[2] + R[0][3] * quaternion[3];
-		newQuaternion[1] = R[1][0] * quaternion[0] + R[1][1] * quaternion[1] + R[1][2] * quaternion[2] + R[1][3] * quaternion[3];
-		newQuaternion[2] = R[2][0] * quaternion[0] + R[2][1] * quaternion[1] + R[2][2] * quaternion[2] + R[2][3] * quaternion[3];
-		newQuaternion[3] = R[3][0] * quaternion[0] + R[3][1] * quaternion[1] + R[3][2] * quaternion[2] + R[3][3] * quaternion[3];
-		*/
-		// Another implementation???
-		quaternion[0] = cos(angle_roll_output / 2) * cos(angle_pitch_output / 2) * cos(angle_yaw_output / 2) +
-				sin(angle_roll_output / 2) * sin(angle_pitch_output / 2) * sin(angle_yaw_output / 2);
-		quaternion[1] = sin(angle_roll_output / 2) * cos(angle_pitch_output / 2) * cos(angle_yaw_output / 2) -
-				cos(angle_roll_output / 2) * sin(angle_pitch_output / 2) * sin(angle_yaw_output / 2);
-		quaternion[2] = cos(angle_roll_output / 2) * sin(angle_pitch_output / 2) * cos(angle_yaw_output / 2) +
-				sin(angle_roll_output / 2) * cos(angle_pitch_output / 2) * sin(angle_yaw_output / 2);
-		quaternion[3] = cos(angle_roll_output / 2) * cos(angle_pitch_output / 2) * sin(angle_yaw_output / 2) -
-				sin(angle_roll_output / 2) * sin(angle_pitch_output / 2) * cos(angle_yaw_output / 2);
-	} else {
-		//newQuaternion[0] = 1;
-		//newQuaternion[1] = xGyro / 2;
-		//newQuaternion[2] = yGyro / 2;
-		//newQuaternion[3] = zGyro / 2;
-	}
+	//theta = (theta + gyroscope[1] * dt) * 0.95 + thetaM * 0.05;
+	//phi = (phi - gyroscope[0] * dt) * 0.95 + phiM * 0.05;
+	//thetaG = thetaG + gyroscope[1] * dt;
+	//phiG = phiG - gyroscope[0] * dt;
 
-	//quaternion[0] = newQuaternion[0];
-	//quaternion[1] = newQuaternion[1];
-	//quaternion[2] = newQuaternion[2];
-	//quaternion[3] = newQuaternion[3];
+	//phiRad = phi / 360 * (2 * 3.141592654);
+	//thetaRad = theta / 360 * (2 * 3.141592654);
 
-	// The goal here is to subtract gravity out of the acceleration vector for easier calculations
-	if (set_gyro_angles == 1) {
-		grav_vec[0] = 2 * (quaternion[1] * quaternion[3] - quaternion[0] * quaternion[2]);
-		grav_vec[1] = 2 * (quaternion[0] * quaternion[1] + quaternion[2] * quaternion[3]);
-		grav_vec[2] = quaternion[0] * quaternion[0] - quaternion[1] * quaternion[1] - quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3];
+	//Xm = magnometer[0] * cos(thetaRad) - magnometer[1] * sin(phiRad) * sin(thetaRad) + magnometer[2] * cos(phiRad) * sin(thetaRad);
+	//Ym = magnometer[1] * cos(phiRad) + magnometer[2] * sin(phiRad);
 
-		acc_vec[0] = xAcc_G - grav_vec[0];
-		acc_vec[1] = yAcc_G - grav_vec[1];
-		acc_vec[2] = zAcc_G - grav_vec[2];
-	}
+	//psi = atan2(Ym, Xm) / (2 * 3.14) * 360;
 
-	// Sets the boolean for the gyro angles
-	set_gyro_angles = 1;
-	// Way to check pitch and roll
-	//printf("%f %f %f \n", angle_pitch_output, angle_roll_output, angle_yaw_output);
-	// Way to check quaternion
-	//printf("%f %f %f %f \n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-	//printf("Pitch: %f		Roll: %f \n\r", angle_pitch_output, angle_roll_output);
-	//printf("Calc Pitch: %f	Calc Roll: %f \n\r", pitch, roll);
-	//printf("%d %d %d %f %f %f \n", xMag, yMag, zMag, correct_xMag, correct_yMag, correct_zMag);
-	// way to check acceleration w/o gravity effect
-	//printf("%f %f %f \n", acc_vec[0], acc_vec[1], acc_vec[2]);
-	HAL_Delay(5);
+	//phiFold = phiFnew;
+	//thetaFold = thetaFnew;
+
+	//printf("Acc Cal: %d Gyro Cal: %d Mag Cal: %d Sys Cal: %d \n", accel, gyro, mg, system);
+	//printf("Acc X: %f, Acc Y: %f Acc Z: %f \n", acceleration[0], acceleration[1], acceleration[2]);
+	//printf("%f %f %f %f %d %d %d %d \n", CQuat[0], CQuat[1], CQuat[2], CQuat[3], accel, gyro, mg, system);
+	printf("%f %f %f %d %d %d %d \n", CEuler[1], CEuler[2], CEuler[0], accel, gyro, mg, system); // Roll, Pitch, Yaw
+	HAL_Delay(BNO055_SAMPLERATE_DELAY_MS);
 	/* End of Basic Data Reading */
   }
   /* USER CODE END 3 */
