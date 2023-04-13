@@ -1,7 +1,7 @@
 import serial
 import time
 
-data = serial.Serial('com100', 115200)
+data = serial.Serial('com117', 115200)
 time.sleep(1)
 while(True):
     while(data.inWaiting() == 0):
@@ -16,5 +16,5 @@ while(True):
     Pitch = float(splitPacket[4])
     Roll = float(splitPacket[5])
     Yaw = float(splitPacket[6])
-    print("Acal=", Acal, " Gcal=", Gcal, " MCal=", Mcal,
+    print("XAcc=", Acal, " YAcc=", Gcal, " ZAcc=", Mcal,
         " Scal=", Scal, " Pitch=", Pitch, " Roll=", Roll, " Yaw=",Yaw)
