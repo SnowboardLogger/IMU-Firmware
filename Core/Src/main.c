@@ -27,6 +27,7 @@
 
 
 #define I2C_Addr 0x50
+#define PI 3.14159265359
 /* PAGE ZERO
  * At power-on Page 0 is selected, PAGE_ID register
  * can be used to identify the current selected page and
@@ -290,11 +291,11 @@ int main(void)
 	volatile int32_t time = 0;
 
 
-	uint16_t MEuler[3] = {0, 0, 0};
+	int16_t MEuler[3] = {0, 0, 0};
 	float CEuler[3] = {0, 0, 0};
 
-	uint16_t MQuat[4] = {0, 0, 0, 0};
-	float CQuat[4] = {0, 0, 0, 0};
+	int16_t MLIA[3] = {0, 0, 0};
+	float CLIA[3] = {0, 0, 0};
 
 	float acceleration[3] = {0, 0, 0};
 	float magnometer[3] = {0, 0, 0};
@@ -444,22 +445,22 @@ int main(void)
 	yGyro = buf[14] | (buf[15] << 8);
 	zGyro = buf[16] | (buf[17] << 8);
 
-	acceleration[0] = (double) xAcc / 100.0;
-	acceleration[1] = (double) yAcc / 100.0;
-	acceleration[2] = (double) zAcc / 100.0;
+	acceleration[0] = (float) xAcc / 100.0;
+	acceleration[1] = (float) yAcc / 100.0;
+	acceleration[2] = (float) zAcc / 100.0;
 
-	magnometer[0] = (double) xMag / 16.0;
-	magnometer[1] = (double) yMag / 16.0;
-	magnometer[2] = (double) zMag / 16.0;
+	magnometer[0] = (float) xMag / 16.0;
+	magnometer[1] = (float) yMag / 16.0;
+	magnometer[2] = (float) zMag / 16.0;
 
-	gyroscope[0] =  (double) xGyro / 16.0;
-	gyroscope[1] =  (double) yGyro / 16.0;
-	gyroscope[2] =  (double) zGyro / 16.0;
+	gyroscope[0] =  (float) xGyro / 16.0;
+	gyroscope[1] =  (float) yGyro / 16.0;
+	gyroscope[2] =  (float) zGyro / 16.0;
 
 	/*
 	 * CALIBRATING THE SYSTEM
 	*/
-	uint8_t system, gyro, accel, mg = 0;
+	uint32_t system, gyro, accel, mg = 0;
 	buf[0] = CALIB_STAT;
 	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
 	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
@@ -478,58 +479,30 @@ int main(void)
 	MEuler[1] = buf[2] | (buf[3] << 8); // Roll
 	MEuler[2] = buf[4] | (buf[5] << 8); // Pitch
 
-	CEuler[0] = (double) MEuler[0] / 16.0;
-	CEuler[1] = (double) MEuler[1] / 16.0;
-	CEuler[2] = (double) MEuler[2] / 16.0;
-
-	// Quaternion Data
-	buf[0] = QUA_DATA_W_LSB;
-	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
-	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 8, 1000);
-	MQuat[0] = buf[0] | (buf[1] << 8); // W
-	MQuat[1] = buf[2] | (buf[3] << 8); // X
-	MQuat[2] = buf[4] | (buf[5] << 8); // Y
-	MQuat[3] = buf[6] | (buf[7] << 8); // Z
-
-	const double scale = (1.0 / (1 << 14));
-
-	CQuat[0] = (double) MQuat[0] * scale;
-	CQuat[1] = (double) MQuat[1] * scale;
-	CQuat[2] = (double) MQuat[2] * scale;
-	CQuat[3] = (double) MQuat[3] * scale;
+	CEuler[0] = fmod((float) MEuler[0] / 16.0, 360.0);
+	CEuler[1] = fmod((float) MEuler[1] / 16.0, 360.0);
+	CEuler[2] = fmod((float) MEuler[2] / 16.0, 360.0);
 
 	/*
-	 * Tilt
-	*/
-	//thetaM = atan2(acceleration[0] / 9.8, acceleration[2] / 9.8) / 2 / 3.141592654 * 360;
-	//phiM = atan2(acceleration[1] / 9.8, acceleration[2] / 9.8) / 2 / 3.141592654 * 360;
-	/* Low Pass Filter */
-	//phiFnew = 0.95 * phiFold  + 0.05 * phiM;
-	//thetaFnew = 0.95 * thetaFold + 0.05 * thetaM;
+	 * Obtaining LINEAR ACCELERATION
+	 */
 
-	//dt = (HAL_GetTick() - millisOld) / 1000;
-	//millisOld = HAL_GetTick();
+	buf[0] = LIA_DATA_X_LSB;
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_Addr, &buf[0], 1, 1000);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_Addr, &buf[0], 6, 1000);
+	MLIA[0] = buf[0] | (buf[1] << 8);
+	MLIA[1] = buf[2] | (buf[3] << 8);
+	MLIA[2] = buf[4] | (buf[5] << 8);
 
-	//theta = (theta + gyroscope[1] * dt) * 0.95 + thetaM * 0.05;
-	//phi = (phi - gyroscope[0] * dt) * 0.95 + phiM * 0.05;
-	//thetaG = thetaG + gyroscope[1] * dt;
-	//phiG = phiG - gyroscope[0] * dt;
+	CLIA[0] = (float) MLIA[0] / 100.0;
+	CLIA[1] = (float) MLIA[1] / 100.0;
+	CLIA[2] = (float) MLIA[2] / 100.0;
 
-	//phiRad = phi / 360 * (2 * 3.141592654);
-	//thetaRad = theta / 360 * (2 * 3.141592654);
-
-	//Xm = magnometer[0] * cos(thetaRad) - magnometer[1] * sin(phiRad) * sin(thetaRad) + magnometer[2] * cos(phiRad) * sin(thetaRad);
-	//Ym = magnometer[1] * cos(phiRad) + magnometer[2] * sin(phiRad);
-
-	//psi = atan2(Ym, Xm) / (2 * 3.14) * 360;
-
-	//phiFold = phiFnew;
-	//thetaFold = thetaFnew;
-
+	printf("%f %f %f %d %d %d %d \n", CLIA[0], CLIA[1], CLIA[2], accel, gyro, mg, system);
 	//printf("Acc Cal: %d Gyro Cal: %d Mag Cal: %d Sys Cal: %d \n", accel, gyro, mg, system);
 	//printf("Acc X: %f, Acc Y: %f Acc Z: %f \n", acceleration[0], acceleration[1], acceleration[2]);
 	//printf("%f %f %f %f %d %d %d %d \n", CQuat[0], CQuat[1], CQuat[2], CQuat[3], accel, gyro, mg, system);
-	printf("%f %f %f %d %d %d %d \n", CEuler[1], CEuler[2], CEuler[0], accel, gyro, mg, system); // Roll, Pitch, Yaw
+	//printf("%f %f %f %d %d %d %d \n", CEuler[1], CEuler[2], CEuler[0], accel, gyro, mg, system); // Roll, Pitch, Yaw
 	HAL_Delay(BNO055_SAMPLERATE_DELAY_MS);
 	/* End of Basic Data Reading */
   }
@@ -787,3 +760,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
