@@ -4,7 +4,7 @@ import numpy as np
 import math
 import serial
 
-data =serial.Serial('com100',115200)
+data =serial.Serial('com117',115200)
 sleep(1)
  
 scene.range=5
